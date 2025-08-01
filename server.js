@@ -445,7 +445,7 @@ app.post('/whatsapp-webhook', async (req, res) => {
         to: from,
         body:
           '🗣️ In which language would you like to hear the summary?\n' +
-          '1. Hindi\n2. English\n3. Bengali\n4. Tamil\n5. Telugu\n6. Kannada\n7. Malayalam\n8. Marathi\n9. Gujarati\n' +
+          '1. हिंदी\n2. English\n3. বাংলা\n4. தமிழ்\n5. తెలుగు\n6. ಕನ್ನಡ\n7. മലയാളം\n8. मराठी\n9. ગુજરાતી\n' +
           '\n👉 Reply with the number (1–9).'
       });
 
