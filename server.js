@@ -439,19 +439,66 @@ app.post('/whatsapp-webhook', async (req, res) => {
 
       const summary = chatCompletion.choices[0].message.content.replace(/[\*\_\~\`]/g, '').split('\n\n').pop().trim();
       userState[from] = { waitingForLanguage: true, summary, expectingVoice: false };
+      // 🎧 Speak language list
+const languageList = `
+१ हिंदी
+2 English
+৩ বাংলা
+4 தமிழ்
+5 తెలుగు
+6 ಕನ್ನಡ
+7 മലയാളം
+8 मराठी
+9 ગુજરાતી
 
+कृपया अपनी पसंद की भाषा का नंबर भेजें।
+`;
+
+const langAudio = await sarvamClient.textToSpeech.convert({
+  text: languageList,
+  target_language_code: 'hi-IN',
+  speaker: 'anushka',
+  model: 'bulbul:v2',
+  pitch: 0, pace: 1, loudness: 1, speech_sample_rate: 22050,
+  enable_preprocessing: true
+});
+
+const langBuffer = Buffer.from(langAudio.audios[0], 'base64');
+const rawLangPath = path.join(__dirname, 'public', `langselect_${timestamp}.raw`);
+const mp3LangPath = path.join(__dirname, 'public', `langselect_${timestamp}.mp3`);
+const langAudioURL = `${NGROK_DOMAIN}/static/langselect_${timestamp}.mp3`;
+
+fs.writeFileSync(rawLangPath, langBuffer);
+
+await new Promise((resolve, reject) => {
+  const ffmpeg = spawn('ffmpeg', [
+    '-f', 's16le', '-ar', '22050', '-ac', '1',
+    '-i', rawLangPath,
+    '-acodec', 'libmp3lame', '-ab', '128k',
+    mp3LangPath
+  ]);
+  ffmpeg.stderr.on('data', data => console.error('ffmpeg:', data.toString()));
+  ffmpeg.on('close', code => code === 0 ? resolve() : reject(new Error('ffmpeg failed')));
+});
+
+await new Promise(resolve => setTimeout(resolve, 1000));
+
+await client.messages.create({
+  from: 'whatsapp:+14155238886',
+  to: from,
+  body: `🎙️ Please listen and reply with a number (1–9) to select your language.`,
+  mediaUrl: [langAudioURL]
+});
       await client.messages.create({
         from: 'whatsapp:+14155238886',
         to: from,
         body:
           '🗣️ In which language would you like to hear the summary?\n' +
-          '1. हिंदी\n2. English\n3. বাংলা\n4. தமிழ்\n5. తెలుగు\n6. ಕನ್ನಡ\n7. മലയാളം\n8. मराठी\n9. ગુજરાતી\n' +
+          '1. हिंदी\n2. English\n3. বাংলা\n4. தமிழ்\n5. తెలుగు\n6. ಕನ್ನಡ\n7. \n8. मराठी\n9. ગુજરાતી\n' +
           '\n👉 Reply with the number (1–9).'
       });
 
-      return res.sendStatus(200);
     }
-
     res.sendStatus(200);
   } catch (err) {
     console.error('❌ Error:', err.message);
